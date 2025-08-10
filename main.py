@@ -241,6 +241,30 @@ def api_search():
         if not query:
             return jsonify({'error': 'Query is required'}), 400
         
+        # Create and execute search task
+        task = create_dynamic_task('search', agents, query=query)
+        result = crew.kickoff_for_each([{'query': query}])
+        
+        return jsonify({
+            'success': True,
+            'query': query,
+            'results': str(result)
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/post', methods=['POST'])
+def api_post_product():
+    """API endpoint for posting products"""
+    try:
+        data = request.json
+        required_fields = ['title', 'description', 'price', 'location']
+        
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'{field} is required'}), 400
+        
         # Create and execute post task
         task = create_dynamic_task('post_product', agents, **data)
         result = crew.kickoff_for_each([data])
@@ -383,27 +407,3 @@ if __name__ == '__main__':
     print(f"Starting multilingual server on port {port}...")
     print("Supported languages: English, Hausa, Igbo, Yoruba")
     app.run(host='0.0.0.0', port=port, debug=debug)
-        task = create_dynamic_task('search', agents, query=query)
-        result = crew.kickoff_for_each([{'query': query}])
-        
-        return jsonify({
-            'success': True,
-            'query': query,
-            'results': str(result)
-        })
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/post', methods=['POST'])
-def api_post_product():
-    """API endpoint for posting products"""
-    try:
-        data = request.json
-        required_fields = ['title', 'description', 'price', 'location']
-        
-        for field in required_fields:
-            if field not in data:
-                return jsonify({'error': f'{field} is required'}), 400
-        
-        # Create and execute
