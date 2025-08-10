@@ -1,0 +1,17 @@
+# requirements.txt
+crewai
+crewai-tools
+flask
+flask-cors
+python-dotenv
+requests
+gtts
+openai-whisper
+speechrecognition
+pydub
+wordpress-api
+langchain
+langchain-community
+pyaudio
+pygame
+langdetect
