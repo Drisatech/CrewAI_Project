@@ -1,0 +1,31 @@
+
+[project]
+name = "farmdepot_multilingual_voice_assistant"
+# Your main entry file (Flask API)
+entry = "main.py"
+# Python version supported by CrewAI runtime
+python_version = "3.11"
+
+[build]
+# Install dependencies before starting the app
+commands = [
+    "pip install --upgrade pip",
+    "pip install -r requirements.txt"
+]
+
+[run]
+# Use gunicorn for production Flask deployment
+# Replace 'main:app' with your Flask app object path
+command = "gunicorn -w 4 -b 0.0.0.0:${PORT:-5000} main:app"
+
+[env]
+# Environment variables (values are set in CrewAI Enterprise UI, not here)
+# Avoid putting secrets in GitHub
+OPENROUTER_API_KEY = "${OPENROUTER_API_KEY}"
+FLASK_ENV = "production"
+PORT = "${PORT}"
+ENABLE_CONTINUOUS_LISTENING = "false"
+
+[logging]
+# Log level options: debug, info, warning, error
+level = "info"
