@@ -12,7 +12,7 @@ pydub
 wordpress-api
 langchain
 langchain-community
-pyaudio
+sounddevice
 pygame
 langdetect
 gunicorn
