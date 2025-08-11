@@ -1,6 +1,6 @@
 # agents.py
 from crewai import Agent
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
 from langchain.llms import OpenAI
 import os
 from typing import Any
