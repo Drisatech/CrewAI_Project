@@ -60,32 +60,7 @@ class VoiceHandler:
                 return parsed_command
             else:
                 print("No command recognized")
-                return     def continuous_listening(self, callback_function, wake_words: dict = None):
-        """Continuous listening loop with multilingual wake words"""
-        if wake_words is None:
-            wake_words = {
-                'english': "hey farmdepot",
-                'hausa': "kai farmdepot",
-                'igbo': "ndewo farmdepot", 
-                'yoruba': "eku farmdepot"
-            }
-        
-        print("Starting continuous listening with multilingual support...")
-        while True:
-            try:
-                # Listen for any wake word
-                wake_detected = False
-                detected_language = 'english'
-                
-                for lang, wake_word in wake_words.items():
-                    if self.listen_for_wake_word(wake_word):
-                        wake_detected = True
-                        detected_language = lang
-                        self.multilingual.current_language = lang
-                        break
-                
-                if wake_detected:
-                    comman
+                return None
         except sr.WaitTimeoutError:
             print("Listening timeout")
             return None
