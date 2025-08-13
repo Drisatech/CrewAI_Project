@@ -1,4 +1,5 @@
 # agents.py
+import requests
 from crewai import Agent
 from crewai.tools import BaseTool
 from langchain.llms import OpenAI
