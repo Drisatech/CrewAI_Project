@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: farmdepot-voice-ai
+    env: python
+    plan: free
+    region: frankfurt  # change if needed: oregon, frankfurt, singapore
+    branch: main       # branch to deploy from
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: gunicorn main:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: ENABLE_CONTINUOUS_LISTENING
+        value: "false"
+      - key: FLASK_DEBUG
+        value: "false"
