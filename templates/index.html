@@ -3,567 +3,380 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FarmDepot.ng Voice Assistant</title>
+    <title>FarmDepot.ng - Voice-Enabled Agricultural Marketplace</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Arial', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            color: #333;
         }
-
+        
         .container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            text-align: center;
             max-width: 600px;
-            width: 90%;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
         }
-
+        
         .logo {
-            font-size: 2.5em;
-            color: #2c5530;
+            font-size: 48px;
             margin-bottom: 10px;
+        }
+        
+        .title {
+            font-size: 42px;
             font-weight: bold;
+            color: #2d5016;
+            margin-bottom: 20px;
         }
-
+        
         .subtitle {
+            font-size: 18px;
             color: #666;
-            margin-bottom: 30px;
-            font-size: 1.1em;
+            margin-bottom: 40px;
         }
-
-        .voice-controls {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+        
+        .language-selector {
             margin-bottom: 30px;
         }
-
-        .mic-button {
+        
+        .language-selector select {
+            padding: 12px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .voice-section {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 40px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .voice-button {
             width: 120px;
             height: 120px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #4CAF50, #45a049);
             border: none;
+            background: #4CAF50;
             color: white;
-            font-size: 2em;
+            font-size: 48px;
             cursor: pointer;
+            margin-bottom: 20px;
             transition: all 0.3s ease;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 10px 25px rgba(76, 175, 80, 0.3);
+            box-shadow: 0 4px 20px rgba(76, 175, 80, 0.4);
         }
-
-        .mic-button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 15px 35px rgba(76, 175, 80, 0.4);
+        
+        .voice-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.6);
         }
-
-        .mic-button.listening {
-            animation: pulse 1.5s infinite;
-            background: linear-gradient(135deg, #f44336, #d32f2f);
+        
+        .voice-button.recording {
+            background: #f44336;
+            animation: pulse 1s infinite;
         }
-
+        
         @keyframes pulse {
-            0% { transform: scale(1); }
+            0%, 100% { transform: scale(1); }
             50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
         }
-
-        .text-input {
+        
+        .input-section {
             display: flex;
             gap: 10px;
-            margin: 20px 0;
+            margin-top: 20px;
+            align-items: center;
         }
-
-        .text-input input {
+        
+        .message-input {
             flex: 1;
-            padding: 15px;
-            border: 2px solid #ddd;
+            padding: 15px 20px;
+            font-size: 16px;
+            border: none;
             border-radius: 25px;
-            font-size: 1em;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             outline: none;
-            transition: border-color 0.3s ease;
         }
-
-        .text-input input:focus {
-            border-color: #4CAF50;
-        }
-
+        
         .send-button {
             padding: 15px 25px;
             background: #4CAF50;
             color: white;
             border: none;
             border-radius: 25px;
+            font-size: 16px;
             cursor: pointer;
-            font-size: 1em;
             transition: background 0.3s ease;
         }
-
+        
         .send-button:hover {
             background: #45a049;
         }
-
+        
         .response-area {
-            background: #f8f9fa;
-            border-radius: 15px;
+            margin-top: 30px;
             padding: 20px;
-            margin-top: 20px;
-            min-height: 100px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
             text-align: left;
+            min-height: 100px;
             display: none;
         }
-
-        .response-text {
-            margin-bottom: 15px;
-            color: #333;
-            line-height: 1.6;
-        }
-
-        .audio-controls {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            justify-content: center;
-        }
-
-        .play-button {
-            background: #2196F3;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .status {
-            margin: 15px 0;
-            padding: 10px;
-            border-radius: 8px;
-            font-weight: 500;
-        }
-
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .status.info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-
-        .language-selector {
-            margin-bottom: 20px;
-        }
-
-        .language-selector label {
+        
+        .response-area.show {
             display: block;
-            margin-bottom: 8px;
+        }
+        
+        .loading {
+            text-align: center;
             color: #666;
-            font-size: 0.9em;
+            font-style: italic;
         }
-
-        .language-dropdown {
-            padding: 8px 15px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 1em;
-            background: white;
-            cursor: pointer;
-            min-width: 150px;
-        }
-
-        .language-dropdown:focus {
-            border-color: #4CAF50;
-            outline: none;
-        }
+        
+        .features {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
             margin-top: 30px;
         }
-
+        
         .feature {
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.9);
             padding: 20px;
-            border-radius: 10px;
-            border-left: 4px solid #4CAF50;
+            border-radius: 15px;
+            text-align: center;
         }
-
-        .feature h3 {
-            color: #2c5530;
+        
+        .feature-icon {
+            font-size: 32px;
             margin-bottom: 10px;
         }
-
-        .feature p {
+        
+        .feature-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #2d5016;
+        }
+        
+        .feature-desc {
+            font-size: 14px;
             color: #666;
-            font-size: 0.9em;
         }
-
-        .hidden {
-            display: none !important;
+        
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            display: none;
         }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-            }
-            
-            .mic-button {
-                width: 100px;
-                height: 100px;
-                font-size: 1.5em;
-            }
-            
-            .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin-top: 30px;
+        
+        .status.error {
+            background: #ffebee;
+            border: 1px solid #f44336;
+            color: #c62828;
+            display: block;
         }
-                grid-template-columns: 1fr;
-            }
+        
+        .status.success {
+            background: #e8f5e8;
+            border: 1px solid #4CAF50;
+            color: #2e7d32;
+            display: block;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="logo">🌾 FarmDepot.ng</div>
-        <div class="subtitle">Voice-Enabled Agricultural Marketplace - Multilingual Support</div>
+        <div class="logo">🌾</div>
+        <h1 class="title">FarmDepot.ng</h1>
+        <p class="subtitle">Voice-Enabled Agricultural Marketplace<br>- Multilingual Support</p>
         
         <div class="language-selector">
-            <label for="languageSelect">Choose Language / Zaɓi Harshe / Họrọ Asụsụ / Yan Ede:</label>
-            <select id="languageSelect" class="language-dropdown">
-                <option value="english">English</option>
-                <option value="hausa">Hausa</option>
-                <option value="igbo">Igbo</option>
-                <option value="yoruba">Yorùbá</option>
+            <label>Choose Language / Zabi Harshe / Họrọ Asụsụ / Yan Ede:</label><br><br>
+            <select id="languageSelect">
+                <option value="en">English</option>
+                <option value="ha">Hausa</option>
+                <option value="ig">Igbo</option>
+                <option value="yo">Yoruba</option>
             </select>
         </div>
-
-        <div class="voice-controls">
-            <button class="mic-button" id="micButton">
-                🎤
-            </button>
-            <div id="status" class="status hidden">Ready to listen...</div>
-        </div>
-
-        <div class="text-input">
-            <input type="text" id="textInput" placeholder="Type your message or use voice...">
-            <button class="send-button" id="sendButton">Send</button>
-        </div>
-
-        <div class="response-area" id="responseArea">
-            <div class="response-text" id="responseText"></div>
-            <div class="audio-controls">
-                <button class="play-button" id="playButton" title="Play response">▶️</button>
-                <span>Play voice response</span>
+        
+        <div class="voice-section">
+            <button id="voiceButton" class="voice-button">🎤</button>
+            
+            <div class="input-section">
+                <input type="text" id="messageInput" class="message-input" placeholder="Type your message or use voice">
+                <button id="sendButton" class="send-button">Send</button>
             </div>
-            <audio id="responseAudio" style="display: none;"></audio>
+            
+            <div id="status" class="status"></div>
         </div>
-
+        
+        <div id="responseArea" class="response-area">
+            <div id="responseText"></div>
+        </div>
+        
         <div class="features">
             <div class="feature">
-                <h3>🔍 Product Search</h3>
-                <p>Say "Find maize" or "Search for cassava" to discover agricultural products</p>
+                <div class="feature-icon">🔍</div>
+                <div class="feature-title">Product Search</div>
+                <div class="feature-desc">Say "Find maize" or "Search for cassava" to discover agricultural products</div>
             </div>
+            
             <div class="feature">
-                <h3>📝 Post Products</h3>
-                <p>Say "Post my product" to list your agricultural items for sale</p>
+                <div class="feature-icon">📝</div>
+                <div class="feature-title">Post Products</div>
+                <div class="feature-desc">Say "Post my product" to list your agricultural items for sale</div>
             </div>
+            
             <div class="feature">
-                <h3>👤 Account Management</h3>
-                <p>Say "Register" or "Login" to manage your account</p>
-            </div>
-            <div class="feature">
-                <h3>🎯 Smart Navigation</h3>
-                <p>Ask "How do I..." or "Help me with..." for guidance</p>
+                <div class="feature-icon">👤</div>
+                <div class="feature-title">Account Management</div>
+                <div class="feature-desc">Say "Register" or "Login" to manage your account</div>
             </div>
         </div>
     </div>
 
     <script>
-        class VoiceAssistant {
-            constructor() {
-                this.isListening = false;
-                this.mediaRecorder = null;
-                this.audioChunks = [];
-                this.currentAudioUrl = null;
-                this.currentLanguage = 'english';
-                this.translations = this.loadTranslations();
-                
-                this.initializeElements();
-                this.setupEventListeners();
-                this.initializeMediaRecorder();
-                this.loadLanguagePreference();
+        let isRecording = false;
+        let recognition = null;
+        
+        // Initialize speech recognition
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+            
+            recognition.onstart = function() {
+                isRecording = true;
+                document.getElementById('voiceButton').classList.add('recording');
+                showStatus('Listening... Please speak your question.', 'success');
+            };
+            
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('messageInput').value = transcript;
+                sendMessage();
+            };
+            
+            recognition.onerror = function(event) {
+                showStatus('Voice recognition error: ' + event.error, 'error');
+                stopRecording();
+            };
+            
+            recognition.onend = function() {
+                stopRecording();
+            };
+        }
+        
+        // Event listeners
+        document.getElementById('voiceButton').addEventListener('click', toggleRecording);
+        document.getElementById('sendButton').addEventListener('click', sendMessage);
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
             }
-
-            loadTranslations() {
-                return {
-                    english: {
-                        listening: 'Listening... Click to stop',
-                        processing: 'Processing your message...',
-                        micReady: 'Microphone ready!',
-                        micError: 'Microphone access denied. Please enable microphone permissions.',
-                        responseReceived: 'Response received!',
-                        playResponse: 'Play voice response'
-                    },
-                    hausa: {
-                        listening: 'Ina saurare... Danna don tsayawa',
-                        processing: 'Ina sarrafa sakonku...',
-                        micReady: 'Microphone ya shirya!',
-                        micError: 'An hana samun microphone. Da fatan za ku ba da izini.',
-                        responseReceived: 'An karɓi amsa!',
-                        playResponse: 'Kunna amsawar murya'
-                    },
-                    igbo: {
-                        listening: 'Na-ege ntị... Pịa ka ịkwụsị',
-                        processing: 'Na-ahazi ozi gị...',
-                        micReady: 'Microphone dị njikere!',
-                        micError: 'Agọnarịrị microphone. Biko nye ikike microphone.',
-                        responseReceived: 'Enwetara nzaghachi!',
-                        playResponse: 'Gbaa nzaghachi olu'
-                    },
-                    yoruba: {
-                        listening: 'Mo n gbọ... Tẹ lati da duro',
-                        processing: 'Mo n ṣiṣẹ lori ifiranṣẹ yin...',
-                        micReady: 'Microphone ti ṣetan!',
-                        micError: 'A ko gba microphone laaye. Ẹ jọwọ fun ni laaye.',
-                        responseReceived: 'A gba idahun!',
-                        playResponse: 'Mu idahun ohun'
-                    }
-                };
+        });
+        
+        function toggleRecording() {
+            if (!recognition) {
+                showStatus('Voice recognition not supported in your browser', 'error');
+                return;
             }
-
-            initializeElements() {
-                this.micButton = document.getElementById('micButton');
-                this.textInput = document.getElementById('textInput');
-                this.sendButton = document.getElementById('sendButton');
-                this.status = document.getElementById('status');
-                this.responseArea = document.getElementById('responseArea');
-                this.responseText = document.getElementById('responseText');
-                this.playButton = document.getElementById('playButton');
-                this.responseAudio = document.getElementById('responseAudio');
-                this.languageSelect = document.getElementById('languageSelect');
-            }
-
-            setupEventListeners() {
-                this.micButton.addEventListener('click', () => this.toggleRecording());
-                this.sendButton.addEventListener('click', () => this.sendTextMessage());
-                this.textInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') this.sendTextMessage();
-                });
-                this.playButton.addEventListener('click', () => this.playResponse());
-                this.languageSelect.addEventListener('change', (e) => this.changeLanguage(e.target.value));
-            }
-
-            loadLanguagePreference() {
-                const savedLang = localStorage.getItem('preferredLanguage') || 'english';
-                this.languageSelect.value = savedLang;
-                this.changeLanguage(savedLang);
-            }
-
-            changeLanguage(language) {
-                this.currentLanguage = language;
-                localStorage.setItem('preferredLanguage', language);
-                
-                // Update UI text based on language
-                this.updateUIText();
-                
-                // Send language preference to server
-                fetch('/api/language/set', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ language: language })
-                }).catch(error => console.error('Error setting language:', error));
-            }
-
-            updateUIText() {
-                const translations = this.translations[this.currentLanguage];
-                if (translations) {
-                    // Update placeholder text
-                    const placeholders = {
-                        english: 'Type your message or use voice...',
-                        hausa: 'Rubuta sakonku ko amfani da murya...',
-                        igbo: 'Dee ozi gị ma ọ bụ jiri olu...',
-                        yoruba: 'Kọ ifiranṣẹ rẹ tabi lo ohun...'
-                    };
-                    this.textInput.placeholder = placeholders[this.currentLanguage] || placeholders.english;
-                }
-            }
-
-            async initializeMediaRecorder() {
+            
+            if (!isRecording) {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    this.mediaRecorder = new MediaRecorder(stream);
-                    
-                    this.mediaRecorder.ondataavailable = (event) => {
-                        this.audioChunks.push(event.data);
-                    };
-                    
-                    this.mediaRecorder.onstop = () => {
-                        const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
-                        this.audioChunks = [];
-                        this.sendVoiceMessage(audioBlob);
-                    };
-                    
-                    this.showStatus(this.translations[this.currentLanguage].micReady, 'success');
+                    recognition.start();
                 } catch (error) {
-                    console.error('Error accessing microphone:', error);
-                    this.showStatus(this.translations[this.currentLanguage].micError, 'error');
+                    showStatus('Error starting voice recognition: ' + error.message, 'error');
                 }
-            }
-
-            toggleRecording() {
-                if (!this.mediaRecorder) {
-                    this.showStatus('Microphone not available', 'error');
-                    return;
-                }
-
-                if (this.isListening) {
-                    this.stopRecording();
-                } else {
-                    this.startRecording();
-                }
-            }
-
-            startRecording() {
-                this.mediaRecorder.start();
-                this.isListening = true;
-                this.micButton.classList.add('listening');
-                this.micButton.innerHTML = '🛑';
-                this.showStatus('Listening... Click to stop', 'info');
-            }
-
-            stopRecording() {
-                this.mediaRecorder.stop();
-                this.isListening = false;
-                this.micButton.classList.remove('listening');
-                this.micButton.innerHTML = '🎤';
-                this.showStatus(this.translations[this.currentLanguage].processing, 'info');
-            }
-
-            async sendVoiceMessage(audioBlob) {
-                const formData = new FormData();
-                formData.append('audio', audioBlob, 'voice_message.wav');
-                formData.append('language', this.currentLanguage);
-
-                try {
-                    const response = await fetch('/api/voice/process', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const result = await response.json();
-                    this.handleResponse(result);
-                } catch (error) {
-                    console.error('Error sending voice message:', error);
-                    this.showStatus('Error processing voice message', 'error');
-                }
-            }
-
-            async sendTextMessage() {
-                const message = this.textInput.value.trim();
-                if (!message) return;
-
-                this.showStatus(this.translations[this.currentLanguage].processing, 'info');
-                this.textInput.value = '';
-
-                try {
-                    const response = await fetch('/api/voice/process', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ 
-                            text: message,
-                            language: this.currentLanguage
-                        })
-                    });
-
-                    const result = await response.json();
-                    this.handleResponse(result);
-                } catch (error) {
-                    console.error('Error sending text message:', error);
-                    this.showStatus('Error processing message', 'error');
-                }
-            }
-
-            handleResponse(result) {
-                if (result.success) {
-                    this.showStatus('Response received!', 'success');
-                    this.responseText.textContent = result.response;
-                    this.responseArea.style.display = 'block';
-                    
-                    if (result.voice_file) {
-                        this.currentAudioUrl = `/api/voice/response/${result.voice_file.split('/').pop()}`;
-                        this.responseAudio.src = this.currentAudioUrl;
-                    }
-                    
-                    // Auto-scroll to response
-                    this.responseArea.scrollIntoView({ behavior: 'smooth' });
-                } else {
-                    this.showStatus(`Error: ${result.error}`, 'error');
-                }
-            }
-
-            playResponse() {
-                if (this.currentAudioUrl) {
-                    this.responseAudio.play().catch(error => {
-                        console.error('Error playing audio:', error);
-                        this.showStatus('Error playing voice response', 'error');
-                    });
-                }
-            }
-
-            showStatus(message, type) {
-                this.status.textContent = message;
-                this.status.className = `status ${type}`;
-                this.status.style.display = 'block';
-                
-                // Auto-hide success and info messages
-                if (type === 'success' || type === 'info') {
-                    setTimeout(() => {
-                        this.status.style.display = 'none';
-                    }, 3000);
-                }
+            } else {
+                recognition.stop();
             }
         }
-
-        // Initialize the voice assistant when the page loads
-        document.addEventListener('DOMContentLoaded', () => {
-            new VoiceAssistant();
-        });
+        
+        function stopRecording() {
+            isRecording = false;
+            document.getElementById('voiceButton').classList.remove('recording');
+        }
+        
+        async function sendMessage() {
+            const message = document.getElementById('messageInput').value.trim();
+            const language = document.getElementById('languageSelect').value;
+            
+            if (!message) {
+                showStatus('Please enter a message or use voice input', 'error');
+                return;
+            }
+            
+            // Show loading
+            showResponse('Processing your request...', true);
+            
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        language: language
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.response) {
+                    showResponse(data.response, false);
+                    showStatus('Response received successfully', 'success');
+                } else {
+                    showResponse('Error: ' + (data.error || 'Unknown error'), false);
+                    showStatus('Error: ' + (data.error || 'Unknown error'), 'error');
+                }
+                
+            } catch (error) {
+                showResponse('Connection error: ' + error.message, false);
+                showStatus('Connection error: ' + error.message, 'error');
+            }
+            
+            // Clear input
+            document.getElementById('messageInput').value = '';
+        }
+        
+        function showResponse(text, isLoading) {
+            const responseArea = document.getElementById('responseArea');
+            const responseText = document.getElementById('responseText');
+            
+            responseText.innerHTML = isLoading ? 
+                '<div class="loading">🤔 ' + text + '</div>' : 
+                text;
+            
+            responseArea.classList.add('show');
+        }
+        
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 5000);
+        }
     </script>
 </body>
 </html>
