@@ -1,19 +1,11 @@
-# main.py
+# main.py - with OpenrouterAI
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import logging
 import os
+import requests
 import traceback
 from datetime import datetime
-
-# Import your CrewAI components (adjust imports based on your project structure)
-try:
-    from crewai import Agent, Task, Crew, Process
-    from langchain_openai import ChatOpenAI
-    CREWAI_AVAILABLE = True
-except ImportError:
-    print("CrewAI not available - using fallback responses")
-    CREWAI_AVAILABLE = False
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -23,122 +15,189 @@ CORS(app)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global variables for CrewAI components
-farming_crew = None
-farming_expert = None
+# OpenRouter configuration
+OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-def initialize_crew():
-    """Initialize CrewAI agents and crew"""
-    global farming_crew, farming_expert
+def call_openrouter_api(message, language='en', model="openai/gpt-4o-mini"):
+    """Call OpenRouter API directly"""
     
-    if not CREWAI_AVAILABLE:
-        logger.warning("CrewAI not available - using fallback mode")
-        return False
+    if not OPENROUTER_API_KEY:
+        logger.error("OPENROUTER_API_KEY not found in environment variables")
+        return None
+    
+    # Language-specific system prompts
+    system_prompts = {
+        'en': """You are an expert Nigerian agricultural specialist. Provide practical, actionable farming advice specific to Nigerian conditions. Keep responses concise (2-3 paragraphs) and include specific varieties, timing, and techniques relevant to Nigeria's climate and soil conditions.""",
+        
+        'ha': """Ka zama gwani masanin aikin gona na Najeriya. Ka ba da shawarwarin aikin gona da suka dace da yanayin Najeriya. Ka yi amfani da Hausa mai saukin fahimta kuma ka ba da shawarwari masu amfani.""",
+        
+        'ig': """Ị bụ ọkachamara n'ihe gbasara ọrụ ugbo na Naịjirịa. Nye ndụmọdụ ọrụ ugbo bara uru nke kwesịrị ọnọdụ Naịjirịa. Jiri Igbo dị mfe nghọta ma nye ndụmọdụ bara uru.""",
+        
+        'yo': """O jẹ amoye ninu ise agbe ti Naijiria. Fun ni imọran ise agbe ti o wulo ti o baamu pẹlu ipo Naijiria. Lo Yoruba ti o rọrun lati ni oye ati fun imọran ti o wulo."""
+    }
+    
+    system_prompt = system_prompts.get(language, system_prompts['en'])
     
     try:
-        # Initialize OpenAI LLM
-        openai_api_key = os.getenv('OPENAI_API_KEY')
-        if not openai_api_key:
-            logger.error("OPENAI_API_KEY not found in environment variables")
-            return False
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "HTTP-Referer": "https://farmdepot.ng",  # Your site URL
+            "X-Title": "FarmDepot Voice Assistant",
+            "Content-Type": "application/json"
+        }
         
-        llm = ChatOpenAI(
-            model="gpt-4-turbo",
-            temperature=0.7,
-            api_key=openai_api_key
+        payload = {
+            "model": model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user", 
+                    "content": f"Question: {message}"
+                }
+            ],
+            "temperature": 0.7,
+            "max_tokens": 500,
+            "top_p": 1,
+            "frequency_penalty": 0,
+            "presence_penalty": 0
+        }
+        
+        response = requests.post(
+            OPENROUTER_BASE_URL,
+            headers=headers,
+            json=payload,
+            timeout=30
         )
         
-        # Create farming expert agent
-        farming_expert = Agent(
-            role="Agricultural Specialist",
-            goal="Provide expert farming advice tailored to Nigerian agriculture",
-            backstory="""You are an experienced agricultural specialist with deep knowledge of 
-            Nigerian farming practices, crops, weather patterns, and market conditions.
-            You speak fluent English, Hausa, Igbo, and Yoruba and provide practical, 
-            actionable advice to farmers.""",
-            llm=llm,
-            verbose=True,
-            allow_delegation=False
-        )
-        
-        # Create crew
-        farming_crew = Crew(
-            agents=[farming_expert],
-            tasks=[],  # Tasks will be created dynamically
-            process=Process.sequential,
-            verbose=2
-        )
-        
-        logger.info("CrewAI components initialized successfully")
-        return True
-        
+        if response.status_code == 200:
+            data = response.json()
+            if 'choices' in data and len(data['choices']) > 0:
+                return data['choices'][0]['message']['content']
+            else:
+                logger.error(f"Unexpected OpenRouter response format: {data}")
+                return None
+        else:
+            logger.error(f"OpenRouter API error: {response.status_code} - {response.text}")
+            return None
+            
     except Exception as e:
-        logger.error(f"Failed to initialize CrewAI: {str(e)}")
+        logger.error(f"OpenRouter API call failed: {str(e)}")
         logger.error(traceback.format_exc())
-        return False
+        return None
 
-def process_with_crewai(message, language='en'):
-    """Process message using CrewAI"""
-    global farming_crew, farming_expert
+def process_farming_query(message, language='en'):
+    """Process farming query using OpenRouter"""
     
-    if not CREWAI_AVAILABLE or not farming_expert:
-        # Fallback response when CrewAI is not available
-        return generate_fallback_response(message, language)
+    # Try OpenRouter API first
+    response = call_openrouter_api(message, language)
     
-    try:
-        # Create task for the specific query
-        task = Task(
-            description=f"""
-            Answer this farming question in {language}: "{message}"
-            
-            Provide practical, actionable advice that is:
-            1. Specific to Nigerian agricultural conditions
-            2. Culturally appropriate
-            3. Easy to understand and implement
-            4. Based on best farming practices
-            
-            If the language is not English, provide the response in that language.
-            Keep the response concise but informative (2-3 paragraphs maximum).
-            """,
-            agent=farming_expert,
-            expected_output="Practical farming advice in the requested language"
-        )
-        
-        # Update crew with new task
-        farming_crew.tasks = [task]
-        
-        # Execute the crew
-        result = farming_crew.kickoff()
-        
-        return str(result)
-        
-    except Exception as e:
-        logger.error(f"CrewAI processing error: {str(e)}")
-        logger.error(traceback.format_exc())
+    if response:
+        return response
+    else:
+        # Fallback to keyword-based responses
+        logger.warning("OpenRouter failed, using fallback responses")
         return generate_fallback_response(message, language)
 
 def generate_fallback_response(message, language='en'):
-    """Generate fallback response when CrewAI is not available"""
+    """Generate fallback response when OpenRouter is not available"""
     
-    # Simple keyword-based responses
     message_lower = message.lower()
     
     responses = {
         'en': {
-            'maize': "For maize cultivation in Nigeria, plant during the rainy season (May-July). Use improved varieties like SAMMAZ-15 or SAMMAZ-16. Ensure proper spacing of 75cm between rows and 25cm between plants. Apply NPK fertilizer at planting and top-dress with urea after 4-6 weeks.",
-            'rice': "Rice grows well in Nigeria's wetland and upland areas. For wetland rice, maintain 2-5cm water depth. Use certified seeds like FARO varieties. Apply basal fertilizer before transplanting and top-dress with urea at tillering and booting stages.",
-            'cassava': "Cassava is drought-tolerant and grows in various soil types. Plant during the rains using 20cm stem cuttings. Space plants 1m x 1m apart. Harvest after 12-18 months. Popular varieties include TMS-30572 and TME-419.",
-            'tomato': "Tomatoes need well-drained soil and regular watering. Start with nursery seedlings, then transplant after 4-6 weeks. Stake plants for support and apply organic fertilizer regularly. Watch for pests like whiteflies and diseases like blight.",
-            'default': f"Thank you for your farming question: '{message}'. For specific advice on crop cultivation, pest control, or farming techniques in Nigeria, please provide more details about your location, crop type, or specific challenge you're facing."
+            'maize': """For maize cultivation in Nigeria:
+            
+🌱 **Planting**: Plant during rainy season (May-July) using improved varieties like SAMMAZ-15, SAMMAZ-16, or local varieties like Oba Super 2.
+
+📏 **Spacing**: 75cm between rows, 25cm between plants (about 53,000 plants per hectare).
+
+🌿 **Fertilization**: Apply NPK 20:10:10 at planting (2 bags/hectare), then top-dress with Urea after 4-6 weeks (1 bag/hectare).
+
+🌧️ **Water**: Needs 500-800mm of rainfall during growing season. Supplement with irrigation if rainfall is insufficient.""",
+            
+            'rice': """Rice cultivation guide for Nigeria:
+            
+🏞️ **Land**: Choose lowland (fadama) areas or prepare upland fields with good drainage.
+
+🌱 **Varieties**: Use FARO varieties (FARO-44, FARO-52) or local varieties like Ofada for better market value.
+
+💧 **Water Management**: For lowland rice, maintain 2-5cm water depth. For upland, ensure consistent moisture without waterlogging.
+
+🌾 **Harvesting**: Ready for harvest 90-120 days after planting when grains turn golden yellow.""",
+            
+            'cassava': """Cassava farming in Nigeria:
+            
+🌿 **Varieties**: Use improved varieties like TMS-30572, TME-419, or NR-8082 for better yields and disease resistance.
+
+🌱 **Planting**: Use 20cm stem cuttings, plant at 45° angle, 1m x 1m spacing (10,000 stands per hectare).
+
+🌧️ **Season**: Plant early in rainy season (April-May) for best establishment.
+
+⏰ **Harvest**: Ready after 12-18 months. Can leave in ground longer if needed as natural storage.""",
+            
+            'tomato': """Tomato production tips:
+            
+🌱 **Nursery**: Start seeds in nursery beds, transplant after 4-6 weeks when plants are 10-15cm tall.
+
+🏞️ **Land**: Choose well-drained soil, add compost or organic matter before planting.
+
+🌿 **Support**: Stake plants or use trellises for better growth and fruit quality.
+
+🐛 **Pest Control**: Watch for whiteflies, aphids, and blight. Use neem-based products or IPM practices.""",
+            
+            'default': f"""Thank you for your farming question about '{message}'. 
+
+For specific advice on Nigerian agriculture, I can help with:
+• Crop cultivation (maize, rice, cassava, yam, tomato, etc.)
+• Soil management and fertilization
+• Pest and disease control
+• Seasonal farming calendar
+• Market prices and varieties
+
+Please ask about a specific crop or farming challenge for detailed guidance."""
         },
-        'ha': {  # Hausa
-            'default': f"Na gode da tambayarku game da noma: '{message}'. Don samun shawarwari na musamman game da noman amfanin gona, yaƙi da kwari, ko dabarun noma a Najeriya, da fatan za ku ba da ƙarin bayani game da yankinku."
+        
+        'ha': {
+            'default': f"""Na gode da tambayarku game da noma: '{message}'.
+
+Zan iya taimaka muku da:
+• Noman amfanin gona (masara, shinkafa, rogo, doya, tumatir)
+• Kula da ƙasa da takin zamani
+• Yaƙi da kwari da cututtuka
+• Lokacin shuki da girbi
+• Farashi da nau'ikan iri-iri
+
+Don samun cikakkun bayanai, ku tambaya game da takamaiman amfanin gona ko matsalar noma."""
         },
-        'ig': {  # Igbo
-            'default': f"Dalu maka ajụjụ gị banyere ọrụ ugbo: '{message}'. Maka ndụmọdụ akọwapụtara banyere ịkọ ihe ọkụkụ, ịlụso ụmụ ahụhụ ọgụ, ma ọ bụ usoro ọrụ ugbo na Naịjirịa, biko nye nkọwa ndị ọzọ."
+        
+        'ig': {
+            'default': f"""Dalu maka ajụjụ gị banyere ọrụ ugbo: '{message}'.
+
+Enwere m ike inyere gị aka na:
+• Ịkọ ihe ọkụkụ (ọka, osikapa, akpụ, ji, tomato)
+• Nlekọta ala na fatịlaịza
+• Ịlụso ụmụ ahụhụ na ọrịa ọgụ
+• Oge ịkụ na ịghọta ihe ọkụkụ
+• Ọnụahịa na ụdị mkpụrụ dị iche iche
+
+Maka nkọwa zuru ezu, jụọ banyere ihe ọkụkụ akọwapụtara ma ọ bụ nsogbu ọrụ ugbo."""
         },
-        'yo': {  # Yoruba
-            'default': f"E se fun ibeere rẹ nipa ise agbe: '{message}'. Fun imọran pato lori gbingbin eso, ijakadi kokoro, tabi awọn ilana ise agbe ni Nigeria, jọwọ fun alaye siwaju si nipa agbegbe rẹ."
+        
+        'yo': {
+            'default': f"""E se fun ibeere rẹ nipa ise agbe: '{message}'.
+
+Mo le ran ọ lọwọ pẹlu:
+• Gbingbin irugbin (agbado, iresi, gbaguda, isu, tomati)
+• Itọju ile ati ajile
+• Koja kokoro ati arun
+• Akoko gbingbin ati ikore
+• Owo ati oriṣiriṣi irugbin
+
+Fun alaye pipe, beere nipa irugbin kan pato tabi iṣoro ise agbe kan."""
         }
     }
     
@@ -146,7 +205,7 @@ def generate_fallback_response(message, language='en'):
     
     # Check for keywords
     for keyword, response in lang_responses.items():
-        if keyword in message_lower:
+        if keyword != 'default' and keyword in message_lower:
             return response
     
     return lang_responses['default']
@@ -163,9 +222,35 @@ def health_check():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'crewai_available': CREWAI_AVAILABLE,
-        'crew_initialized': farming_crew is not None
+        'openrouter_configured': OPENROUTER_API_KEY is not None,
+        'service': 'FarmDepot Voice Assistant'
     })
+
+@app.route('/models', methods=['GET'])
+def available_models():
+    """Get available OpenRouter models"""
+    if not OPENROUTER_API_KEY:
+        return jsonify({'error': 'OpenRouter API key not configured'}), 500
+    
+    try:
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.get(
+            "https://openrouter.ai/api/v1/models",
+            headers=headers,
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return jsonify({'error': 'Failed to fetch models'}), response.status_code
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/', methods=['POST'])
 @app.route('/chat', methods=['POST'])
@@ -188,20 +273,29 @@ def chat():
                 'error': 'No message found in request'
             }), 400
         
-        # Extract language
+        # Extract language and model
         language = data.get('language', 'en')
+        model = data.get('model', 'openai/gpt-4o-mini')  # Default model
         
-        logger.info(f"Processing message: {message} (language: {language})")
+        logger.info(f"Processing message: {message} (language: {language}, model: {model})")
         
-        # Process with CrewAI or fallback
-        response = process_with_crewai(message, language)
+        # Process the farming query
+        response_text = process_farming_query(message, language)
         
-        return jsonify({
-            'response': response,
-            'language': language,
-            'timestamp': datetime.now().isoformat(),
-            'status': 'success'
-        })
+        if response_text:
+            return jsonify({
+                'response': response_text,
+                'language': language,
+                'model_used': model,
+                'timestamp': datetime.now().isoformat(),
+                'status': 'success'
+            })
+        else:
+            return jsonify({
+                'error': 'Failed to generate response',
+                'timestamp': datetime.now().isoformat(),
+                'status': 'error'
+            }), 500
         
     except Exception as e:
         logger.error(f"Chat endpoint error: {str(e)}")
@@ -218,23 +312,6 @@ def voice_chat():
     """Voice endpoint (currently same as text chat)"""
     return chat()
 
-# Voice processing functions (fixed)
-def process_voice_input(audio_data, language='en'):
-    """Process voice input - placeholder function"""
-    # This would contain your actual voice processing logic
-    return "Voice processing not implemented yet"
-
-# Initialize CrewAI on startup
-@app.before_first_request
-def initialize_app():
-    """Initialize the application"""
-    logger.info("Initializing FarmDepot Voice Assistant...")
-    success = initialize_crew()
-    if success:
-        logger.info("✅ CrewAI initialized successfully")
-    else:
-        logger.warning("⚠️ CrewAI initialization failed - using fallback mode")
-
 # Error handlers
 @app.errorhandler(404)
 def not_found(error):
@@ -245,8 +322,11 @@ def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
-    # Initialize CrewAI
-    initialize_crew()
+    # Check OpenRouter configuration
+    if OPENROUTER_API_KEY:
+        logger.info("✅ OpenRouter API key configured")
+    else:
+        logger.warning("⚠️ OPENROUTER_API_KEY not found - using fallback responses only")
     
     # Get port from environment (required for Render)
     port = int(os.environ.get('PORT', 5000))
